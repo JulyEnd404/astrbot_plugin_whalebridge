@@ -39,8 +39,8 @@ a42a3eec4e6efa2d023915e980e9af7d5fcf9439
 
 ```sh
 # 在固定提交的 MimicWX 源码目录执行；修改下面路径为本仓库的实际位置。
-git apply --ignore-space-change --check /path/to/astrbot_plugin_mimicwx/patches/mimicwx-ui-compat.patch
-git apply --ignore-space-change /path/to/astrbot_plugin_mimicwx/patches/mimicwx-ui-compat.patch
+git apply --ignore-space-change --check /path/to/astrbot_plugin_whalebridge/patches/mimicwx-ui-compat.patch
+git apply --ignore-space-change /path/to/astrbot_plugin_whalebridge/patches/mimicwx-ui-compat.patch
 ```
 
 `--ignore-space-change` 用于该上游提交的 CRLF/LF 差异。检查失败时停止，不要强行应用。按上游构建说明生成自己核验的镜像，保留认证、私有网络和登录卷，在测试环境重新验收。回退时使用之前的镜像/备份，不要在有其他本地改动的仓库里盲用破坏性重置。

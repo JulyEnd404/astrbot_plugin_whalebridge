@@ -1,4 +1,8 @@
-# AstrBot MimicWX 微信通道（实验性）
+# 鲸桥 WhaleBridge
+
+连接 AstrBot 与微信的开源平台插件，基于已有的 MimicWX HTTP/UI 通道。
+
+[![Checks](https://github.com/JulyEnd404/astrbot_plugin_whalebridge/actions/workflows/ci.yml/badge.svg)](https://github.com/JulyEnd404/astrbot_plugin_whalebridge/actions/workflows/ci.yml)
 
 > **请先安装、运行并配置好 [AstrBot](https://github.com/AstrBotDevs/AstrBot)，再来安装本插件。**
 > 本仓库是 AstrBot 的补充平台适配插件，依赖另行部署、已登录且接口兼容的 MimicWX；它不能独立运行，也不会替你安装微信、扫码登录或配置模型。
@@ -7,14 +11,14 @@
 > **第三方微信自动化可能违反平台协议，触发登录验证、功能限制或封号，也可能造成聊天隐私泄露、误发、重复或漏回。界面自动化和“开源”均不等于安全、官方授权或不会封号。**
 > 使用前完整阅读 [风险与免责声明](DISCLAIMER.md) 和 [安全说明](SECURITY.md)。不接受这些风险时，请不要启用。请勿使用重要账号、敏感聊天或依赖此项目处理高风险事务。
 
-本插件把 MimicWX 的 HTTP 收发接口转换为 AstrBot 标准群消息事件，让已有的模型、人设、对话、分段和兼容插件继续工作。**不附带模型账号、积分额度、角色卡、群聊增强插件或个人长期记忆系统。**
+WhaleBridge 把 MimicWX 的 HTTP 收发接口转换为 AstrBot 标准群消息事件，让已有的模型、人设、对话、分段和兼容插件继续工作。**不附带模型账号、积分额度、角色卡、群聊增强插件或个人长期记忆系统。**
 
 ## 开始使用
 
 1. **先运行 AstrBot**，配置模型，并确认它已经能够完成普通 AI 对话。
 2. 自行准备已登录的 Linux 微信和兼容的 MimicWX HTTP 服务。不要假定 MimicWX 最新版、OneBot 模式和本文接口完全相同。
-3. 在 AstrBot 的插件管理中，从链接安装：`https://github.com/JulyEnd404/astrbot_plugin_mimicwx`。
-4. 重启 AstrBot，在“消息平台 / 机器人”中添加 **MimicWX 微信通道（实验性）**。
+3. 在 AstrBot 的插件管理中，从链接安装：`https://github.com/JulyEnd404/astrbot_plugin_whalebridge`。
+4. 重启 AstrBot，在“消息平台 / 机器人”中添加 **鲸桥 WhaleBridge（实验性微信通道）**。
 5. 填入私有 API 地址、令牌环境变量、机器人昵称和精确会话白名单；阅读免责声明后自行确认风险，再启用。
 6. 只在一个经授权的测试群中验收文字，再验收图片。确认行为符合预期后再扩大范围。
 

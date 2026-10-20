@@ -22,7 +22,7 @@ class Settings:
 def settings_from(config: dict) -> Settings:
     if config.get("risk_acknowledged") is not True:
         raise ValueError("Read README and DISCLAIMER.md, then explicitly acknowledge the risks")
-    platform_id = config.get("id", "mimicwx-wechat")
+    platform_id = config.get("id", "whalebridge-wechat")
     if not isinstance(platform_id, str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,80}", platform_id):
         raise ValueError("Platform id must use 1-80 ASCII letters, numbers, hyphens or underscores")
     url = config.get("api_url", "http://127.0.0.1:8899")

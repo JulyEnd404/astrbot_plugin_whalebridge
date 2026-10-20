@@ -47,7 +47,7 @@ class MimicWXEvent(AstrMessageEvent):
     default_config_tmpl={
         "type": "mimicwx",
         "enable": False,
-        "id": "mimicwx-wechat",
+        "id": "whalebridge-wechat",
         "risk_acknowledged": False,
         "api_url": "http://127.0.0.1:8899",
         "api_token_env": "MIMICWX_API_TOKEN",
@@ -59,7 +59,7 @@ class MimicWXEvent(AstrMessageEvent):
         "poll_interval": 2.0,
         "discard_startup_backlog": True,
     },
-    adapter_display_name="MimicWX 微信通道（实验性）",
+    adapter_display_name="鲸桥 WhaleBridge（实验性微信通道）",
     support_streaming_message=False,
     config_metadata={
         "api_token": {
@@ -87,7 +87,7 @@ class MimicWXAdapter(Platform):
         self.self_id = (
             "mimicwx-bot-" + hashlib.sha256(self.settings.platform_id.encode()).hexdigest()[:12]
         )
-        self.state_dir = StarTools.get_data_dir("astrbot_plugin_mimicwx") / (
+        self.state_dir = StarTools.get_data_dir("astrbot_plugin_whalebridge") / (
             "instance_" + hashlib.sha256(self.settings.platform_id.encode()).hexdigest()[:12]
         )
         self.state_dir.mkdir(parents=True, exist_ok=True)
@@ -369,7 +369,12 @@ class MimicWXAdapter(Platform):
         self._active_origins.discard(self.origin)
 
 
-@register("astrbot_plugin_mimicwx", "JulyEnd404", "实验性 MimicWX HTTP 微信平台适配器", "0.1.0")
-class MimicWXPlugin(Star):
+@register(
+    "astrbot_plugin_whalebridge",
+    "JulyEnd404",
+    "鲸桥 WhaleBridge：实验性 AstrBot 微信平台适配器",
+    "0.1.0",
+)
+class WhaleBridgePlugin(Star):
     def __init__(self, context: Context):
         super().__init__(context)

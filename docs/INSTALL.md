@@ -53,20 +53,20 @@ python tools/check_transport.py --url http://127.0.0.1:8899
 在 AstrBot 管理面板进入“插件”，选择从链接安装：
 
 ```text
-https://github.com/JulyEnd404/astrbot_plugin_mimicwx
+https://github.com/JulyEnd404/astrbot_plugin_whalebridge
 ```
 
 检查依赖安装及插件加载状态，然后重启 AstrBot 一次，让新增平台出现在消息平台选择列表中。仅安装插件不会自动登录微信或启用通道。
 
-开发者也可将仓库放到 AstrBot 的 `data/plugins/astrbot_plugin_mimicwx/` 中，按 AstrBot 官方文档安装依赖并重启。
+开发者也可将仓库放到 AstrBot 的 `data/plugins/astrbot_plugin_whalebridge/` 中，按 AstrBot 官方文档安装依赖并重启。
 
 ## 第五步：添加消息平台
 
-在 AstrBot 的“消息平台 / 机器人”页新增 **MimicWX 微信通道（实验性）**。这是平台配置，不是在插件页随意新增一份 JSON。
+在 AstrBot 的“消息平台 / 机器人”页新增 **鲸桥 WhaleBridge（实验性微信通道）**。这是平台配置，不是在插件页随意新增一份 JSON。
 
 | 参数 | 说明 |
 | --- | --- |
-| `id` | 例如 `mimicwx-wechat`；使用后不要随意更改，会影响会话及去重数据命名空间 |
+| `id` | 例如 `whalebridge-wechat`；使用后不要随意更改，会影响会话及去重数据命名空间 |
 | `enable` | 默认关闭；完成配置和风险评估后自行开启 |
 | `risk_acknowledged` | 阅读风险后显式设为 `true`；它不能替代法律授权 |
 | `api_url` | MimicWX 的 HTTP(S) origin；不得附带账号、密码、路径、查询参数或 fragment |
@@ -115,7 +115,7 @@ python tools/group_ids.py '机器人测试群'
 
 ## 数据、停止与升级
 
-每个平台ID对应数据目录 `data/plugin_data/astrbot_plugin_mimicwx/instance_<哈希>/`，含 `bridge.sqlite3` 和只含计数/状态的 `health.json`。去重记录保留约7天，发言摘要保留约5分钟；上游与其他插件的正文和日志不由本插件控制。
+每个平台ID对应数据目录 `data/plugin_data/astrbot_plugin_whalebridge/instance_<哈希>/`，含 `bridge.sqlite3` 和只含计数/状态的 `health.json`。去重记录保留约7天，发言摘要保留约5分钟；上游与其他插件的正文和日志不由本插件控制。
 
 在 AstrBot 停用或删除该平台配置可以停止本通道；这不保证会停止其他消费者或删除其他组件保存的数据。不要通过删除去重库来解决重复回复，这可能引发旧消息再次处理。
 

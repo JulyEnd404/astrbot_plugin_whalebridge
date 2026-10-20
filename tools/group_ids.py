@@ -9,7 +9,7 @@ import json
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("names", nargs="+", help="Exact, unambiguous chat display names")
-    parser.add_argument("--platform-id", default="mimicwx-wechat")
+    parser.add_argument("--platform-id", default="whalebridge-wechat")
     args = parser.parse_args()
     for name in args.names:
         gid = "wxg_" + hashlib.sha256(name.encode()).hexdigest()[:24]

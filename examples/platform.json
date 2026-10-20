@@ -1,6 +1,6 @@
 {
   "type": "mimicwx",
-  "id": "mimicwx-wechat",
+  "id": "whalebridge-wechat",
   "enable": false,
   "risk_acknowledged": false,
   "api_url": "http://127.0.0.1:8899",
