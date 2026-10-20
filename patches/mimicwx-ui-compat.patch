@@ -1,0 +1,395 @@
+--- a/src/main.rs
++++ b/src/main.rs
+@@ -13,6 +13,8 @@
+ mod chatwnd;
+ mod db;
+ mod input;
++mod input_geometry;
++mod message_cursor;
+ mod wechat;
+ 
+ use anyhow::Result;
+@@ -146,7 +148,7 @@
+             wechat::WeChatStatus::WaitingForLogin => {
+                 if !login_prompted {
+                     info!("📱 请通过 noVNC (http://localhost:6080/vnc.html) 扫码登录微信");
+-                    info!("🔑 GDB 密钥提取已在后台运行, 登录后将自动获取数据库密钥");
++                    info!("本次测试使用界面监听，请打开指定测试群");
+                     login_prompted = true;
+                 }
+                 tokio::time::sleep(std::time::Duration::from_secs(3)).await;
+@@ -157,63 +159,8 @@
+         }
+     }
+ 
+-    // ⑥ 读取 GDB 提取的数据库密钥 + 初始化 DbManager
+-    let key_path = "/tmp/wechat_key.txt";
+-    for i in 0..10 {
+-        if std::path::Path::new(key_path).exists() {
+-            break;
+-        }
+-        if i == 0 {
+-            info!("🔑 等待 GDB 提取密钥...");
+-        }
+-        tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+-    }
+-
+-    let db_manager: Option<Arc<db::DbManager>> = match std::fs::read_to_string(key_path) {
+-        Ok(key) => {
+-            let key = key.trim().to_string();
+-            if key.len() == 64 {
+-                info!("🔑 数据库密钥已获取 ({}...{})", &key[..8], &key[56..]);
+-
+-                // 查找数据库目录
+-                let db_dir = find_db_dir();
+-                match db_dir {
+-                    Some(dir) => {
+-                        match db::DbManager::new(key, dir) {
+-                            Ok(mgr) => {
+-                                let mgr = Arc::new(mgr);
+-                                // 等待微信同步数据库后再加载联系人 (刚登录时表不完整)
+-                                tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+-                                if let Err(e) = mgr.refresh_contacts().await {
+-                                    warn!("⚠️ 联系人加载失败 (可能尚无数据): {}", e);
+-                                }
+-                                // 标记已有消息为已读
+-                                if let Err(e) = mgr.mark_all_read().await {
+-                                    warn!("⚠️ 标记已读失败: {}", e);
+-                                }
+-                                Some(mgr)
+-                            }
+-                            Err(e) => {
+-                                warn!("⚠️ DbManager 初始化失败: {}", e);
+-                                None
+-                            }
+-                        }
+-                    }
+-                    None => {
+-                        warn!("⚠️ 未找到微信数据库目录, 数据库监听不可用");
+-                        None
+-                    }
+-                }
+-            } else {
+-                warn!("⚠️ 密钥文件格式异常 (长度: {}), 跳过", key.len());
+-                None
+-            }
+-        }
+-        Err(_) => {
+-            warn!("⚠️ 未找到密钥文件, 数据库解密功能不可用");
+-            None
+-        }
+-    };
++    // Trial: UI messages only; no database keys or database access.
++    let db_manager: Option<Arc<db::DbManager>> = None;
+ 
+     // ⑦ 广播通道 (WebSocket)
+     let (tx, _) = tokio::sync::broadcast::channel::<String>(128);
+@@ -376,7 +323,7 @@
+         let listen_tx = tx.clone();
+         tokio::spawn(async move {
+             info!("👂 后台监听 (AT-SPI fallback 模式)");
+-            let mut interval = tokio::time::interval(std::time::Duration::from_secs(3));
++            let mut interval = tokio::time::interval(std::time::Duration::from_secs(1));
+             loop {
+                 interval.tick().await;
+                 let msgs = listen_wechat.get_listen_messages().await;
+--- a/src/chatwnd.rs
++++ b/src/chatwnd.rs
+@@ -31,7 +31,7 @@
+     /// 缓存的消息列表节点 (DFS初始化时找到, 后续监听复用)
+     msg_list_node: Option<NodeRef>,
+     /// 已读消息计数 (last_count 追踪法)
+-    last_count: i32,
++    message_cursor: crate::message_cursor::UiMessageCursor,
+     /// 是否自动保存图片
+     pub save_pic: bool,
+     /// 是否自动保存文件
+@@ -50,7 +50,7 @@
+             window_node,
+             edit_box_node: None,
+             msg_list_node: None,
+-            last_count: 0,
++            message_cursor: Default::default(),
+             save_pic: false,
+             save_file: false,
+         }
+@@ -167,60 +167,22 @@
+         messages
+     }
+ 
+-    /// 获取新消息 (last_count 追踪法: 只读取新增的消息)
++    /// Read the current virtualized rows every poll; row count is not an event cursor.
+     pub async fn get_new_messages(&mut self) -> Vec<ChatMessage> {
+-        // 获取消息列表节点
+-        let msg_list = if let Some(ref cached) = self.msg_list_node {
+-            cached.clone()
+-        } else {
+-            match self.find_message_list().await {
+-                Some(l) => l,
+-                None => return Vec::new(),
+-            }
+-        };
+-
+-        let count = self.atspi.child_count(&msg_list).await;
+-        debug!("[ChatWnd::get_new_messages] {} count={} last_count={}", self.who, count, self.last_count);
+-        if count < self.last_count {
+-            // 消息列表变小了 (窗口重建/消息被清理), 重置
+-            debug!("[ChatWnd::get_new_messages] {} count 减少, 重置 last_count", self.who);
+-            self.last_count = count;
+-            return Vec::new();
+-        }
+-        if count == self.last_count {
+-            return Vec::new(); // 没有新消息
+-        }
+-
+-        // 只读取 last_count..count 的新消息
+-        let mut new_msgs = Vec::new();
+-        for i in self.last_count..count.min(self.last_count + 50) {
+-            if let Some(child) = self.atspi.child_at(&msg_list, i).await {
+-                let msg = self.parse_message_item(&child, i).await;
+-                new_msgs.push(msg);
+-            }
+-        }
+-
+-        self.last_count = count;
+-        new_msgs
+-    }
+-
+-    /// 标记当前所有消息为已读
++        let messages = self.get_all_messages().await;
++        let ids: Vec<String> = messages.iter().map(|m| m.msg_id.clone()).collect();
++        let fresh = self.message_cursor.unseen(&ids);
++        messages.into_iter().enumerate()
++            .filter_map(|(i, message)| fresh.contains(&i).then_some(message))
++            .collect()
++    }
++
++    /// Suppress visible history when a listener is first attached.
+     pub async fn mark_all_read(&mut self) {
+-        let msg_list = if let Some(ref cached) = self.msg_list_node {
+-            cached.clone()
+-        } else {
+-            match self.find_message_list().await {
+-                Some(l) => l,
+-                None => {
+-                    debug!("[ChatWnd::mark_all_read] {} 未找到消息列表", self.who);
+-                    return;
+-                }
+-            }
+-        };
+-
+-        let count = self.atspi.child_count(&msg_list).await;
+-        self.last_count = count;
+-        debug!("[ChatWnd::mark_all_read] {} 标记 {} 条消息为已读", self.who, count);
++        let messages = self.get_all_messages().await;
++        let ids: Vec<String> = messages.iter().map(|m| m.msg_id.clone()).collect();
++        self.message_cursor.prime(&ids);
++        debug!("[ChatWnd] {} primed {} visible messages", self.who, ids.len());
+     }
+ 
+     // =================================================================
+@@ -229,7 +191,9 @@
+ 
+     /// 解析单个消息项
+     async fn parse_message_item(&self, item: &NodeRef, index: i32) -> ChatMessage {
+-        parse_message_item(&self.atspi, item, index).await
++        let mut message = parse_message_item(&self.atspi, item, index).await;
++        message.msg_id = crate::message_cursor::message_id(&item.bus, item.path.as_str(), &message.content);
++        message
+     }
+ 
+     // =================================================================
+@@ -300,35 +264,27 @@
+ 
+     /// 激活独立窗口并聚焦输入框 (send_message/send_image 的公共前置步骤)
+     async fn activate_and_focus_input(&self, engine: &mut InputEngine) -> Result<()> {
+-        // 1. 将独立窗口提到前台 (X11 _NET_ACTIVE_WINDOW)
+-        let activated = engine.activate_window_by_title(&self.who, false)
+-            .unwrap_or(false);
+-        if !activated {
+-            // 回退: 点击标题栏
+-            if let Some(bbox) = self.atspi.bbox(&self.window_node).await {
+-                let cx = bbox.x + bbox.w / 2;
+-                engine.click(cx, bbox.y + 30).await?;
+-            }
++        let actual_name = self.atspi.name(&self.window_node).await;
++        if actual_name.trim() != self.who {
++            anyhow::bail!("目标聊天窗口名称不符，停止发送");
++        }
++        if !engine.activate_window_by_title(&self.who, true)? {
++            self.atspi.grab_focus(&self.window_node).await;
+         }
+         tokio::time::sleep(ms(300)).await;
+-
+-        // 2. 点击输入框 (缓存的精确坐标, 或偏移量回退)
+-        if let Some(ref edit_node) = self.edit_box_node {
+-            // 精确方案: 用缓存节点的 bbox
+-            if let Some(eb) = self.atspi.bbox(edit_node).await {
+-                let (cx, cy) = eb.center();
+-                engine.click(cx, cy).await?;
+-                tokio::time::sleep(ms(200)).await;
+-            }
+-        } else {
+-            // 偏移量回退: 点击窗口底部输入区域
+-            if let Some(bbox) = self.atspi.bbox(&self.window_node).await {
+-                let cx = bbox.x + bbox.w / 2;
+-                engine.click(cx, bbox.y + bbox.h - 50).await?;
+-                tokio::time::sleep(ms(200)).await;
+-            }
+-        }
+-
++        let window = self.atspi.bbox(&self.window_node).await
++            .ok_or_else(|| anyhow::anyhow!("目标聊天窗口坐标不可用"))?;
++        let candidate = match self.edit_box_node {
++            Some(ref node) => self.atspi.bbox(node).await,
++            None => None,
++        };
++        info!("输入框坐标核对: window={:?}, cached={:?}", window, candidate);
++        let (cx, cy) = crate::input_geometry::input_center(
++            [window.x, window.y, window.w, window.h],
++            candidate.map(|r| [r.x, r.y, r.w, r.h]),
++        ).ok_or_else(|| anyhow::anyhow!("聊天窗口坐标无效，停止发送"))?;
++        engine.click(cx, cy).await?;
++        tokio::time::sleep(ms(200)).await;
+         Ok(())
+     }
+ 
+--- /dev/null
++++ b/src/input_geometry.rs
+@@ -0,0 +1,41 @@
++// Refuse empty or unrelated accessibility rectangles before injecting input.
++pub fn input_center(window: [i32; 4], candidate: Option<[i32; 4]>) -> Option<(i32, i32)> {
++    let [x, y, w, h] = window.map(i64::from);
++    if x < 0 || y < 0 || w < 200 || h < 220 || x + w > i32::MAX as i64 || y + h > i32::MAX as i64 {
++        return None;
++    }
++    if let Some(candidate) = candidate {
++        let [ex, ey, ew, eh] = candidate.map(i64::from);
++        if ew >= 20 && eh >= 20 && ex >= x && ey >= y + h / 2 && ex + ew <= x + w && ey + eh <= y + h {
++            return Some(((ex + ew / 2) as i32, (ey + eh / 2) as i32));
++        }
++    }
++    Some(((x + w / 2) as i32, (y + h - 100) as i32))
++}
++
++#[cfg(test)]
++mod tests {
++    use super::input_center;
++    const WINDOW: [i32; 4] = [340, 40, 600, 640];
++
++    #[test]
++    fn valid_editor_uses_its_center() {
++        assert_eq!(input_center(WINDOW, Some([350, 550, 580, 90])), Some((640, 595)));
++    }
++    #[test]
++    fn empty_or_header_nodes_use_the_editor_area() {
++        for node in [[0, 0, 0, 0], [350, 45, 120, 30], [-2147483648, 0, 0, 0], [0, 0, 100, 80]] {
++            assert_eq!(input_center(WINDOW, Some(node)), Some((640, 580)));
++        }
++    }
++    #[test]
++    fn absent_editor_uses_the_editor_area() {
++        assert_eq!(input_center(WINDOW, None), Some((640, 580)));
++    }
++    #[test]
++    fn missing_or_offscreen_windows_are_rejected() {
++        for window in [[0, 0, 0, 0], [-200, 0, 600, 640], [0, 0, 600, 100], [i32::MAX, 0, 600, 640]] {
++            assert_eq!(input_center(window, None), None);
++        }
++    }
++}
+--- /dev/null
++++ b/src/message_cursor.rs
+@@ -0,0 +1,92 @@
++//! Track visible message identity, not the number of virtualized list rows.
++use std::collections::{HashSet, VecDeque};
++use std::hash::{Hash, Hasher};
++
++pub fn message_id(bus: &str, path: &str, content: &str) -> String {
++    let mut hasher = std::collections::hash_map::DefaultHasher::new();
++    (bus, path, content).hash(&mut hasher);
++    format!("ui:{:016x}", hasher.finish())
++}
++
++#[derive(Default)]
++pub struct UiMessageCursor {
++    initialized: bool,
++    seen: HashSet<String>,
++    order: VecDeque<String>,
++}
++
++impl UiMessageCursor {
++    fn remember(&mut self, id: &str) -> bool {
++        if !self.seen.insert(id.to_string()) { return false; }
++        self.order.push_back(id.to_string());
++        while self.order.len() > 4096 {
++            if let Some(old) = self.order.pop_front() { self.seen.remove(&old); }
++        }
++        true
++    }
++
++    pub fn prime(&mut self, ids: &[String]) {
++        for id in ids { self.remember(id); }
++        self.initialized = true;
++    }
++
++    pub fn unseen(&mut self, ids: &[String]) -> Vec<usize> {
++        if !self.initialized {
++            self.prime(ids);
++            return Vec::new();
++        }
++        ids.iter().enumerate().filter_map(|(i, id)| self.remember(id).then_some(i)).collect()
++    }
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++    fn ids(values: &[&str]) -> Vec<String> { values.iter().map(|x| x.to_string()).collect() }
++
++    #[test]
++    fn startup_does_not_replay_history() {
++        let mut c = UiMessageCursor::default();
++        assert!(c.unseen(&ids(&["old1", "old2"])).is_empty());
++        assert_eq!(c.unseen(&ids(&["old1", "old2", "new"])), vec![2]);
++    }
++    #[test]
++    fn same_count_new_tail_is_detected() {
++        let mut c = UiMessageCursor::default();
++        c.prime(&ids(&["a", "b", "c"]));
++        assert_eq!(c.unseen(&ids(&["b", "c", "d"])), vec![2]);
++    }
++    #[test]
++    fn smaller_list_still_detects_new_messages() {
++        let mut c = UiMessageCursor::default();
++        c.prime(&ids(&["a", "b", "c", "d", "e", "f"]));
++        assert_eq!(c.unseen(&ids(&["reply", "time", "command"])), vec![0, 1, 2]);
++    }
++    #[test]
++    fn scrolled_known_rows_and_repeated_polls_are_not_new() {
++        let mut c = UiMessageCursor::default();
++        c.prime(&ids(&["a", "b", "c"]));
++        assert!(c.unseen(&ids(&["b", "c"])).is_empty());
++        assert!(c.unseen(&ids(&["a", "b", "c"])).is_empty());
++    }
++    #[test]
++    fn identity_survives_position_change_but_allows_repeated_text() {
++        let first = message_id(":1.1", "/message1", "合成重复文本");
++        let repeat = message_id(":1.1", "/message2", "合成重复文本");
++        let mut c = UiMessageCursor::default();
++        c.prime(&[first.clone()]);
++        assert!(c.unseen(&[first.clone()]).is_empty());
++        assert_eq!(c.unseen(&[first, repeat]), vec![1]);
++    }
++    #[test]
++    fn reused_accessible_node_with_changed_content_is_new() {
++        assert_ne!(message_id("bus", "/row", "old"), message_id("bus", "/row", "new"));
++    }
++    #[test]
++    fn cursor_storage_is_bounded() {
++        let mut c = UiMessageCursor::default();
++        c.prime(&(0..5000).map(|i| i.to_string()).collect::<Vec<_>>());
++        assert_eq!(c.seen.len(), 4096);
++        assert_eq!(c.order.len(), 4096);
++    }
++}

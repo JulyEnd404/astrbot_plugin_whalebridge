@@ -1,0 +1,8 @@
+*.py text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+transport/xclip text eol=lf
+# Unified diff context lines intentionally contain a single leading space.
+patches/*.patch -whitespace

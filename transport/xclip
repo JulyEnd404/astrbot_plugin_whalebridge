@@ -1,0 +1,8 @@
+#!/bin/sh
+# Optional MimicWX-container-only shim: paste GIF as a file URI to retain animation.
+if [ "$#" -eq 6 ] && [ "$1" = '-selection' ] && [ "$3" = '-t' ] &&
+   [ "$4" = 'image/gif' ] && [ "$5" = '-i' ]; then
+    printf 'file://%s\r\n' "$6" | /usr/bin/xclip -selection "$2" -t text/uri-list -i
+else
+    exec /usr/bin/xclip "$@"
+fi

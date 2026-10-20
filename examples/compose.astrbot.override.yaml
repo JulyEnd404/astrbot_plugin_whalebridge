@@ -1,0 +1,13 @@
+# Supplemental file for an ALREADY INSTALLED AstrBot Compose deployment.
+# Review the service/network names and merge without dropping existing volumes/networks.
+# This does not install or start MimicWX. Do not expose its API/VNC publicly.
+services:
+  astrbot:
+    environment:
+      MIMICWX_API_TOKEN: ${MIMICWX_API_TOKEN:?Set a private API token in the deployment .env}
+    networks:
+      - mimicwx_transport
+networks:
+  mimicwx_transport:
+    external: true
+    name: ${MIMICWX_NETWORK:?Set the name of the existing MimicWX private network}

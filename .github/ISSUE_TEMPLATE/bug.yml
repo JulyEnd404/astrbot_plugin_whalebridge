@@ -1,0 +1,23 @@
+name: 脱敏问题报告
+description: 先确认 AstrBot 本体正常；请勿公开账号、token 或聊天。
+body:
+  - type: checkboxes
+    attributes:
+      label: 提交前确认
+      options:
+        - label: 已阅读安装教程、兼容性说明和免责声明
+          required: true
+        - label: 未附带真实凭据、登录二维码、完整配置或聊天记录
+          required: true
+  - type: textarea
+    attributes:
+      label: 版本与环境
+      description: 插件、AstrBot、Python、MimicWX版本；不要填写服务器地址或账号。
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: 预期行为、实际行为及合成复现步骤
+      description: 用虚构群名和消息复现，安全漏洞不要公开细节。
+    validations:
+      required: true

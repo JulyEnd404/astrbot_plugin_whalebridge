@@ -1,0 +1,15 @@
+{
+  "type": "mimicwx",
+  "id": "mimicwx-wechat",
+  "enable": false,
+  "risk_acknowledged": false,
+  "api_url": "http://127.0.0.1:8899",
+  "api_token_env": "MIMICWX_API_TOKEN",
+  "api_token": "",
+  "groups": ["机器人测试群"],
+  "self_name": "你的机器人昵称",
+  "mention_names": ["你的机器人昵称"],
+  "unknown_sender_policy": "mention_only",
+  "poll_interval": 2.0,
+  "discard_startup_backlog": true
+}
