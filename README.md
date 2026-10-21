@@ -12,11 +12,11 @@
 >
 > **不向作者回传隐私。** 本插件不含遥测、埋点、广告统计、作者数据接收端或额外的数据上传通道，不会向作者回传聊天内容、账号密码或令牌，也不主动采集聊天适配所需以外的个人信息。
 >
-> 插件仍需通过 HTTP 访问你配置的 MimicWX，并将必要的消息内容交给 AstrBot。它没有脱离这套部署独立运行的能力；这不等于不联网、不处理聊天数据，也不能替 AstrBot、其他插件或模型服务作隐私保证。详见[数据处理范围](DISCLAIMER.md#3-隐私与数据处理)。
+> 插件仍需通过 HTTP 访问你配置的 MimicWX，并将必要的消息内容交给 AstrBot。它没有脱离这套部署独立运行的能力；这不等于不联网、不处理聊天数据，也不能替 AstrBot、其他插件或模型服务作隐私保证。详见[数据处理范围](https://github.com/JulyEnd404/astrbot_plugin_whalebridge/blob/main/DISCLAIMER.md#3-隐私与数据处理)。
 
 > [!WARNING]
 > **第三方微信自动化可能违反平台协议，触发登录验证、功能限制或封号，也可能造成聊天隐私泄露、误发、重复或漏回。界面自动化和“开源”均不等于安全、官方授权或不会封号。**
-> 使用前完整阅读 [风险与免责声明](DISCLAIMER.md) 和 [安全说明](SECURITY.md)。不接受这些风险时，请不要启用。请勿使用重要账号、敏感聊天或依赖此项目处理高风险事务。
+> 使用前完整阅读 [风险与免责声明](https://github.com/JulyEnd404/astrbot_plugin_whalebridge/blob/main/DISCLAIMER.md) 和 [安全说明](https://github.com/JulyEnd404/astrbot_plugin_whalebridge/blob/main/SECURITY.md)。不接受这些风险时，请不要启用。请勿使用重要账号、敏感聊天或依赖此项目处理高风险事务。
 
 WhaleBridge 把 MimicWX 的 HTTP 收发接口转换为 AstrBot 标准群消息事件，让已有的模型、人设、对话、分段和兼容插件继续工作。**不附带模型账号、积分额度、角色卡、群聊增强插件或个人长期记忆系统。**
 
@@ -25,11 +25,11 @@ WhaleBridge 把 MimicWX 的 HTTP 收发接口转换为 AstrBot 标准群消息�
 1. **先运行 AstrBot**，配置模型，并确认它已经能够完成普通 AI 对话。
 2. 自行准备已登录的 Linux 微信和兼容的 MimicWX HTTP 服务。不要假定 MimicWX 最新版、OneBot 模式和本文接口完全相同。
 3. 在 AstrBot 的插件管理中，从链接安装：`https://github.com/JulyEnd404/astrbot_plugin_whalebridge`。
-4. 重启 AstrBot，在“消息平台 / 机器人”中添加 **鲸桥 WhaleBridge（实验性微信通道）**。
-5. 填入私有 API 地址、令牌环境变量、机器人昵称和精确会话白名单；阅读免责声明后自行确认风险，再启用。
+4. 重启 AstrBot，在“机器人 → 创建机器人”的平台类别中选择 **`mimicwx`**（鲸桥注册的类别；列表较长时向下滚动）。
+5. 在 **AstrBot 的鲸桥平台设置**中填入 **MimicWX 微信收发服务地址（不是大模型 API 地址）**、令牌环境变量名、机器人昵称和精确会话白名单；阅读免责声明后自行确认风险，再启用。大模型地址和密钥仍在 AstrBot 的“模型提供商”中配置。
 6. 只在一个经授权的测试群中验收文字，再验收图片。确认行为符合预期后再扩大范围。
 
-**完整操作步骤、Docker 网络、参数、白名单和验收方法见 [安装与使用教程](docs/INSTALL.md)。** 插件页安装成功不等于微信已接通。
+**实际操作截图、Docker 网络、参数、白名单和验收方法见 [安装与使用图文教程](https://github.com/JulyEnd404/astrbot_plugin_whalebridge/blob/main/docs/INSTALL.md)。** 教程已分清大模型 API 与 MimicWX 收发 API 的填写位置。插件页安装成功不等于微信已接通。
 
 ## 能做什么
 
@@ -71,7 +71,7 @@ WhaleBridge 把 MimicWX 的 HTTP 收发接口转换为 AstrBot 标准群消息�
 
 ## 版本与验证
 
-- 公共版 `0.1.0` 为实验性版本。原生接口测试基线：AstrBot `4.29.1`、Python `3.12`、MimicWX `0.4.0` HTTP 接口形状。
+- 公共版 `0.1.1` 为实验性版本，补齐后台表单类型和字段说明；原生接口测试基线：AstrBot `4.29.1`、Python `3.12`、MimicWX `0.4.0` HTTP 接口形状。
 - 不承诺与 MimicWX 所有分支、最新微信或全部 AstrBot 插件兼容；发布测试不包含任何人的真实账号、群聊或登录态。
 - [兼容性说明](docs/COMPATIBILITY.md) 区分原部署的实测记录、公开版隔离测试和未验证部分。
 
