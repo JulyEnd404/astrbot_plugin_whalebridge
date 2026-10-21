@@ -1,7 +1,7 @@
 name: astrbot_plugin_whalebridge
 display_name: 鲸桥 WhaleBridge（实验性微信通道）
-short_desc: 鲸桥 WhaleBridge：为已运行的 AstrBot 接入 MimicWX 微信群通道。
-desc: 实验性第三方微信平台适配器。需要自行部署并登录 MimicWX，存在账号、隐私、误发及版本兼容风险，请先阅读 README 与免责声明。
+short_desc: 永久免费的鲸桥 WhaleBridge，为已运行的 AstrBot 接入 MimicWX 微信群通道。
+desc: 官方插件本体永久免费，不含遥测或向作者回传隐私的数据通道；必要消息通过自行部署的 MimicWX 与 AstrBot 处理。实验性适配器，存在账号、隐私、误发及版本兼容风险，使用前请先阅读 README 与免责声明。
 version: 0.1.0
 author: JulyEnd404
 repo: https://github.com/JulyEnd404/astrbot_plugin_whalebridge
