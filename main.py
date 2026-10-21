@@ -62,16 +62,53 @@ class MimicWXEvent(AstrMessageEvent):
     adapter_display_name="鲸桥 WhaleBridge（实验性微信通道）",
     support_streaming_message=False,
     config_metadata={
+        "api_url": {
+            "type": "string",
+            "description": "MimicWX 微信收发 API 地址",
+            "hint": "不是大模型 API 地址。填写 AstrBot 所在环境能访问的 MimicWX 地址，例如 http://mimicwx:8899。",
+        },
         "api_token": {
             "type": "string",
-            "description": "API token（推荐改用环境变量）",
+            "description": "MimicWX 接口令牌（推荐改用环境变量）",
             "secret": True,
         },
         "api_token_env": {
             "type": "string",
-            "description": "AstrBot进程内保存API token的环境变量名称",
+            "description": "MimicWX 令牌的环境变量名",
+            "hint": "填写名称 MIMICWX_API_TOKEN，不是令牌值，也不是大模型密钥；变量须注入 AstrBot 进程或容器。",
         },
         "risk_acknowledged": {"type": "bool", "description": "已阅读README和DISCLAIMER并理解风险"},
+        "groups": {
+            "type": "list",
+            "description": "允许收发的微信会话名称",
+            "hint": "每项填写一个精确会话名称；先只添加一个经授权的测试群。",
+        },
+        "self_name": {
+            "type": "string",
+            "description": "机器人微信昵称",
+            "hint": "填写机器人在微信中实际显示的昵称。",
+        },
+        "mention_names": {
+            "type": "list",
+            "description": "群内 @ 机器人的昵称",
+            "hint": "每项一个昵称，不带 @；先使用机器人的实际微信昵称。",
+        },
+        "unknown_sender_policy": {
+            "type": "string",
+            "description": "无法识别发言者时的策略",
+            "options": ["drop", "mention_only", "group"],
+            "hint": "默认 mention_only，仅接收明确 @；group 模式不能可靠区分不同群友。",
+        },
+        "poll_interval": {
+            "type": "float",
+            "description": "轮询间隔（秒）",
+            "hint": "范围 1–30 秒，默认 2 秒。",
+        },
+        "discard_startup_backlog": {
+            "type": "bool",
+            "description": "启动时跳过积压消息",
+            "hint": "默认开启以减少重启后补回旧消息；也可能跳过启动过程中的新消息。",
+        },
     },
 )
 class MimicWXAdapter(Platform):
@@ -373,7 +410,7 @@ class MimicWXAdapter(Platform):
     "astrbot_plugin_whalebridge",
     "JulyEnd404",
     "鲸桥 WhaleBridge：实验性 AstrBot 微信平台适配器",
-    "0.1.0",
+    "0.1.1",
 )
 class WhaleBridgePlugin(Star):
     def __init__(self, context: Context):
